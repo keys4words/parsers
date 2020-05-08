@@ -32,9 +32,9 @@ tree = etree.parse("C:/Users/keys4.000/Documents/4git/parsers/parserOne/data/web
 #         print(f'{item.text.strip()} {a[0].text}')
         
 # parsing with xpath
-title_element = tree.xpath('//title/text()')[0]
-print(title_element)
-print(tree.xpath('//p/text()')[0])
+title_element = tree.xpath('//title')[0]
+print(title_element.text)
+print(tree.xpath('//p')[0].text)
 list_items = tree.xpath("//li")
 for item in list_items:
     text = ''.join(map(str.strip, item.xpath('.//text()')))
