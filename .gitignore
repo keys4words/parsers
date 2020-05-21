@@ -13,6 +13,9 @@
 .idea/**/dictionaries
 .idea/**/shelf
 
+# exclude settings and data
+**/settings.py
+
 # Generated files
 .idea/**/contentModel.xml
 
