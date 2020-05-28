@@ -16,9 +16,22 @@ FILE = 'output/tinko.csv'
 
 res = []
 
+script = '''
+  headers = {
+    ['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36',
+    ['cookie'] = 'BITRIX_SM_SALE_UID=8f172cfd28b150ccd863f07789c5bb22; supportOnlineTalkID=IE4pGZEUa5lF2oboTGC5Wynv1NZ25MSr; supportOnlineTalkID=IE4pGZEUa5lF2oboTGC5Wynv1NZ25MSr; sort_catalog=default; order_catalog=asc; catalog_mode=list; count_catalog=24; PHPSESSID=819f65d998b662dff5647c8153371f9e; BITRIX_CONVERSION_CONTEXT_s1=%7B%22ID%22%3A1%2C%22EXPIRE%22%3A1590699540%2C%22UNIQUE%22%3A%5B%22conversion_visit_day%22%5D%7D'
+  }
+  splash:set_custom_headers(headers)
+  splash.private_mode_enabled = false
+  splash.images_enabled = false
+  assert(splash:go(args.url))
+  assert(splash:wait(1))
+  return splash:html()
+'''
+
+
 def get_tree(url):
     response = requests.get(url=url, headers=HEADERS)
-    print(response.content)
     return html.fromstring(html=response.content)
 
 
@@ -33,13 +46,22 @@ def get_content(url):
     p_info = get_tree(url)
     first_name = str(get(p_info.xpath("//h2/text()")))
     second_name = str(get(p_info.xpath("//h1/text()")))
+
+    resp = requests.post(url='http://localhost:8050/run',
+                         json={
+                             'lua_source': script,
+                             'url': url
+                         })
+    pprint.pprint(resp.content)
+    tree_from_splash = html.fromstring(resp.content)
+
     p = {
         'name': ' '.join([first_name.strip(), second_name.strip()]),
         'photo': urljoin(base=HOST, url=get(p_info.xpath("//div[@class='tovar-detail__image']/a/@href"))),
-        'price': get(p_info.xpath("//li[1]/div[1]/span[1]/text()")).replace(' ', ''),
-        'desc': str(p_info.xpath("//div[contains(@class, 'tovar-detail__description active')]/div/text()")),
+        'price': get(p_info.xpath("//div[@class='tovar-detail__price'][1]/span/text()")).replace(' ', ''),
+        #'desc': tree_from_splash.xpath("//div[contains(@class, 'tovar-detail__description')]/div/text()"),
         'short_desc': get(p_info.xpath("//div[@class='tovar-detail__short-description']/span[2]/text()")),
-        'characteristics': get(p_info.xpath("//table[@class='characteristics']/text()")),
+        #'characteristics': get(tree_from_splash.xpath("//table[@class='characteristics']/text()")),
         'url': url,
     }
     return p
@@ -62,6 +84,6 @@ def scrape(url):
 
 
 # scrape(url=URL)
-pprint.pprint(get_content('https://www.tinko.ru/catalog/product/010002/'))
+get_content('https://www.tinko.ru/catalog/product/010002/')
 
 # print(f'{len(res)} was parsed!')
