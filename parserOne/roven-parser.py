@@ -25,7 +25,7 @@ def parse(URL):
         print('Error')
 
 
-wb = load_workbook('data/roven-dop.xlsx')
+wb = load_workbook('../data/roven-dop.xlsx')
 ws = wb.active
 urls_raw = ws['G']
 content_raw = ws['F']

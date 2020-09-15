@@ -25,7 +25,7 @@ def parse(URL):
         return 'Error'
 
 
-wb = load_workbook('data/tcpb.xlsx')
+wb = load_workbook('../data/tcpb.xlsx')
 ws = wb.active
 urls_raw = ws['H']
 content_raw = ws['I']
