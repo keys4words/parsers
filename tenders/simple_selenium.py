@@ -32,6 +32,7 @@ try:
     # elements = elements[:2]
     res = []
     for el in elements:
+        WebDriverWait(driver, delay).until(EC.presence_of_element_located((By.XPATH, './/div[@id="timer"]')))
         timer = el.find_element_by_xpath('.//div[@id="timer"]')
         timer = (timer.text).replace('\n', '')
         name = el.find_element_by_xpath('.//div[@class="cl-black fs12 weight-500 lh20 td-underline wwrap-bw"]')
