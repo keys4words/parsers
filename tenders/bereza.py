@@ -2,13 +2,15 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
 from openpyxl import Workbook
 import random
 
-'''keywords = ['АПС', 'вибрационный датчик', 'водопенное оборудование', 'воздушно пенный', 'воздушно эмульсионный', 'воздушно-пенный', 'воздушно-эмульсионный', 'генератор огнетушащего аэрозоля', 'генераторы пены', 'гидрант', 'гидротестер', 'дымоудаление', 'извещатель', 'микрокапсулирование', 'мотопомпа', 'ОВП', 'ОВЭ', 'огнетушитель', 'ОПС', 'охранно-пожарный', 'переговорные устройства', 'периметр', 'пирокорд', 'пиростикер', 'план эвакуации', 'пожарная безопасность', 'пожарная сигнализация', 'пожарная', 'пожарное оборудование', 'пожарно-охранный', 'пожаротушение', 'противодымный', 'противопожарный', 'рукав', 'самоспасатель', 'сигнализация охранная', 'сигнализация', 'систем безопасности', 'систем защиты', 'система оповещения', 'система пожарной безопасности', 'средство обнаружения', 'стволы', 'трибоэлектрический датчик', 'управление эвакуацией', 'шланг']'''
+keywords = []
+with open('keywords.txt', 'r', encoding='utf-8') as f:
+    for line in f:
+        keywords.append(line.strip())
 
-keywords = ['водопенное оборудование', 'АПС']
 # random.shuffle(keywords)
 
 res = dict()
@@ -18,14 +20,6 @@ driver = webdriver.Chrome()
 driver.get(baseUrl)
 
 
-def check_pagination(driver):
-    try:
-        driver.find_elements_by_xpath('//div[@class="flex middle-xs center-xs align-center fs13 lh35 cl-black weight-700"]/div')
-    except NoSuchElementException:
-        return False
-    return True
-
-
 def parse_page(keyword, driver):
     searchbox = driver.find_element_by_xpath('//div[@class="filter-rs"]/input')
     searchbox.send_keys(keyword)
@@ -33,15 +27,20 @@ def parse_page(keyword, driver):
     searchBtn = driver.find_element_by_xpath('//button[@class="pt7 pb7 no-outline button-full block brdr-none align-center lh20 bg-cl-th-accent bg-cl-th-button-primary ripple fs14 cl-white relative mb11"]')
     searchBtn.click()
 
-    delay = 3
+    delay = random.randint(6, 15)
     try:
         WebDriverWait(driver, delay).until(EC.presence_of_element_located((By.XPATH, '//div[@class="container"]//div[@class="row"]//div[contains(@class, "purchase")]')))
+        # print('\t row - ok', end='')
         elements = driver.find_elements_by_xpath('//div[@class="purchase flex between-xs wrap m0 mb10 brdr-1 brdr-cl-gray3"]')
-        # elements = elements[:2]
+        # print('\t elements - ok', end='')
         for el in elements:
+            WebDriverWait(driver, delay).until(EC.presence_of_element_located((By.XPATH, './/div[@class="weight-500 mb5 lh25 fs14 td-underline"]')))
             WebDriverWait(driver, delay).until(EC.presence_of_element_located((By.XPATH, './/div[@id="timer"]')))
-            number = el.find_element_by_xpath('.//div[@class="weight-500 mb5 lh25 fs14 td-underline"]')
-            number = number.text
+            try:
+                number = el.find_element_by_xpath('.//div[@class="weight-500 mb5 lh25 fs14 td-underline"]')
+                number = number.text
+            except StaleElementReferenceException:
+                number = '#'
             name = el.find_element_by_xpath('.//div[@class="cl-black fs12 weight-500 lh20 td-underline wwrap-bw"]')
             name = name.text
             timer = el.find_element_by_xpath('.//div[@id="timer"]')
@@ -63,14 +62,15 @@ def parse_page(keyword, driver):
         searchbox.clear()
     except TimeoutException:
         print(f'timeout with keyword: {keyword}')
+        searchbox.clear()
 
-def save_results():
+def save_results(res):
     wb = Workbook()
     ws = wb.active
-    headers = ['Наименование', 'Время до окончания подачи предложений', 'Заказчик', 'Стартовая цена', 'Информация о закупке']
+    headers = ['Номер','Наименование', 'Время до окончания подачи предложений', 'Заказчик', 'Стартовая цена', 'Информация о закупке']
     ws.append(headers)
-    for tender in res:
-        ws.append([tender.name, tender.timer, tender.customer, tender.price, tender.info])
+    for tender_number, tender_info in res.items():
+        ws.append([tender_number, tender_info['name'], tender_info['timer'], tender_info['customer'], tender_info['price'], tender_info['info']])
 
     wb.save('D:\\USERDATA\\Documents\\4git\\parsers\\data\\tenders.xlsx')
 
@@ -87,9 +87,7 @@ for keyword in keywords:
             parse_page(keyword=keyword, driver=driver)
             counter += 1
     
+save_results(res)
 
 driver.quit()
-print(len(res))
-
-
-
+print('Parsed ' + str(len(res)))
