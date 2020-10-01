@@ -4,7 +4,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
 from openpyxl import Workbook
-import random
+import random, os, logging
+from datetime import datetime
+
 
 keywords = []
 with open('keywords.txt', 'r', encoding='utf-8') as f:
@@ -59,9 +61,10 @@ def parse_page(keyword, driver):
                            'price': price,
                            'info': info}
             
+        logging.info(f'parsing OK with keyword: {keyword}')
         searchbox.clear()
     except TimeoutException:
-        print(f'timeout with keyword: {keyword}')
+        logging.warning(f'timeout with keyword: {keyword}')
         searchbox.clear()
 
 def save_results(res):
@@ -72,8 +75,16 @@ def save_results(res):
     for tender_number, tender_info in res.items():
         ws.append([tender_number, tender_info['name'], tender_info['timer'], tender_info['customer'], tender_info['price'], tender_info['info']])
 
-    wb.save('D:\\USERDATA\\Documents\\4git\\parsers\\data\\tenders.xlsx')
+    name = os.path.abspath(os.path.dirname(__file__))
+    name = os.path.join(name, datetime.now().strftime("%d-%m-%Y_%H-%M"))
+    wb.save(name + '.xlsx')
 
+
+root_logger= logging.getLogger()
+handler = logging.FileHandler('reports.log', 'w', 'utf-8')
+formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+handler.setFormatter(formatter)
+root_logger.addHandler(handler)
 
 
 for keyword in keywords:
