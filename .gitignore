@@ -16,6 +16,9 @@
 # exclude settings and data
 **/settings.py
 
+# exclude config
+**/config.py
+
 # Generated files
 .idea/**/contentModel.xml
 
