@@ -1,18 +1,20 @@
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from config import from_email, password
+import yagmail
+from config import from_email, password, to_email
 
 
-msg = MIMEMultipart()
-msg['Subject'] = 'Bere'
-to_email = '105@rinova.ru'
-message = 'test message'
+receiver = to_email
+body = "Below you find file with actual tenders from Berezka platform"
+filename = "01-10-2020_14-54.xlsx"
+contents = [
+    body,
+    filename
+]
 
-
-msg.attach(MIMEText(message, 'plain'))
-server = smtplib.SMTP('smtp.yandex.ru:465')
-server.starttls()
-server.login(from_email, password)
-server.sendmail(from_email, to_email, msg.as_string())
-server.quit()
+yagmail.register(from_email, password)
+yag = yagmail.SMTP(from_email)
+yag.send(
+    to=receiver,
+    subject="Berezka Tenders",
+    contents=contents,
+    # attachments=filename,
+)
