@@ -6,21 +6,20 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException,
 from openpyxl import Workbook
 import random, os, logging
 from datetime import datetime
+import yagmail
+from config import from_email, password, to_email
 
 
-keywords = []
-with open('keywords.txt', 'r', encoding='utf-8') as f:
-    for line in f:
-        keywords.append(line.strip())
+FILE_WITH_KEYWORDS = 'D:\\USERDATA\\Documents\\4git\\parsers\\tenders\\keywords\\bereza.txt'
+
+def get_keywords(filename):
+    keywords = []
+    with open(filename, 'r', encoding='utf-8') as f:
+        for line in f:
+            keywords.append(line.strip())
+        return keywords
 
 # random.shuffle(keywords)
-
-res = dict()
-baseUrl = 'https://agregatoreat.ru/purchases/new'
-
-driver = webdriver.Chrome()
-driver.get(baseUrl)
-
 
 def parse_page(keyword, driver):
     searchbox = driver.find_element_by_xpath('//div[@class="filter-rs"]/input')
@@ -76,29 +75,64 @@ def save_results(res):
         ws.append([tender_number, tender_info['name'], tender_info['timer'], tender_info['customer'], tender_info['price'], tender_info['info']])
 
     name = os.path.abspath(os.path.dirname(__file__))
-    name = os.path.join(name, datetime.now().strftime("%d-%m-%Y_%H-%M"))
-    wb.save(name + '.xlsx')
+    name = os.path.join(name, 'out', datetime.now().strftime("%d-%m-%Y_%H-%M"))
+    results_file_name = name + '.xlsx'
+    wb.save(results_file_name)
+    return results_file_name
 
 
-root_logger= logging.getLogger()
-handler = logging.FileHandler('reports.log', 'w', 'utf-8')
-formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
-handler.setFormatter(formatter)
-root_logger.addHandler(handler)
+def logging_setup():
+    root_logger= logging.getLogger()
+    handler = logging.FileHandler('reports.log', 'w', 'utf-8')
+    formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+    handler.setFormatter(formatter)
+    root_logger.addHandler(handler)
 
 
-for keyword in keywords:
-    parse_page(keyword=keyword, driver=driver)
-    pagination = driver.find_elements_by_xpath('//div[@class="flex middle-xs center-xs align-center fs13 lh35 cl-black weight-700"]/div')
-    if len(pagination) > 1:
-        counter = 1
-        while counter < len(pagination):
-            new_url = baseUrl + '/page/' + str(counter+1)
-            driver.get(new_url)
-            parse_page(keyword=keyword, driver=driver)
-            counter += 1
+def parsing(keywords):
+    for keyword in keywords:
+        parse_page(keyword=keyword, driver=driver)
+        pagination = driver.find_elements_by_xpath('//div[@class="flex middle-xs center-xs align-center fs13 lh35 cl-black weight-700"]/div')
+        if len(pagination) > 1:
+            counter = 1
+            while counter < len(pagination):
+                new_url = baseUrl + '/page/' + str(counter+1)
+                driver.get(new_url)
+                parse_page(keyword=keyword, driver=driver)
+                counter += 1
+    logging.info(f'Parsed ' + str(len(res)))
+    logging.info('='*36)
+
+
+def sending_email(filename):
+    receiver = to_email
+    body = "Below you find file with actual tenders from Berezka platform"
+    contents = [
+        body,
+        filename
+    ]
+
+    yagmail.register(from_email, password)
+    yag = yagmail.SMTP(from_email)
+    yag.send(
+        to=receiver,
+        subject="Berezka Tenders",
+        contents=contents,
+        # attachments=filename,
+    )
+    logging.info(f'file {filename} successfully sended')
+
+
+
+res = dict()
+baseUrl = 'https://agregatoreat.ru/purchases/new'
+
+driver = webdriver.Chrome()
+driver.get(baseUrl)
+
+logging_setup()
+parsing(get_keywords(FILE_WITH_KEYWORDS))
     
-save_results(res)
+sending_email(save_results(res))
 
 driver.quit()
-print('Parsed ' + str(len(res)))

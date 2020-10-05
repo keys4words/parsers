@@ -4,7 +4,7 @@ from config import from_email, password, to_email
 
 receiver = to_email
 body = "Below you find file with actual tenders from Berezka platform"
-filename = "01-10-2020_14-54.xlsx"
+filename = "05-10-2020_09-31.xlsx"
 contents = [
     body,
     filename
