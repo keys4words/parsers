@@ -7,10 +7,12 @@ from openpyxl import Workbook
 import random, os, logging
 from datetime import datetime
 import yagmail
-from config import from_email, password, to_email
+from config import from_email, password, to_emails
 
 
 FILE_WITH_KEYWORDS = 'D:\\USERDATA\\Documents\\4git\\parsers\\tenders\\keywords\\bereza.txt'
+BASE_URL = 'https://agregatoreat.ru/purchases/new'
+
 
 def get_keywords(filename):
     keywords = []
@@ -105,7 +107,6 @@ def parsing(keywords):
 
 
 def sending_email(filename):
-    receiver = to_email
     body = "Below you find file with actual tenders from Berezka platform"
     contents = [
         body,
@@ -115,7 +116,7 @@ def sending_email(filename):
     yagmail.register(from_email, password)
     yag = yagmail.SMTP(from_email)
     yag.send(
-        to=receiver,
+        to=to_emails,
         subject="Berezka Tenders",
         contents=contents,
         # attachments=filename,
@@ -125,10 +126,9 @@ def sending_email(filename):
 
 
 res = dict()
-baseUrl = 'https://agregatoreat.ru/purchases/new'
 
 driver = webdriver.Chrome()
-driver.get(baseUrl)
+driver.get(BASE_URL)
 
 logging_setup()
 parsing(get_keywords(FILE_WITH_KEYWORDS))
