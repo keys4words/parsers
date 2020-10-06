@@ -7,7 +7,7 @@ from openpyxl import Workbook
 import random, os, logging
 from datetime import datetime
 import yagmail
-from config import from_email, password, to_emails
+from config import from_email, password, to_emails, cc, bcc
 
 
 FILE_WITH_KEYWORDS = 'D:\\USERDATA\\Documents\\4git\\parsers\\tenders\\keywords\\bereza.txt'
@@ -118,6 +118,8 @@ def sending_email(filename):
     yag.send(
         to=to_emails,
         subject="Berezka Tenders",
+        cc=cc,
+        bcc=bcc,
         contents=contents,
         # attachments=filename,
     )
@@ -132,7 +134,9 @@ driver.get(BASE_URL)
 
 logging_setup()
 parsing(get_keywords(FILE_WITH_KEYWORDS))
-    
+logging.info(f'Parsed ' + str(len(res)))
+logging.info('='*36)
+
 sending_email(save_results(res))
 
 driver.quit()
