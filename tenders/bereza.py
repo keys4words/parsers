@@ -11,6 +11,7 @@ from config import from_email, password, to_emails, cc, bcc
 
 
 FILE_WITH_KEYWORDS = 'D:\\USERDATA\\Documents\\4git\\parsers\\tenders\\keywords\\bereza.txt'
+FILE_WITH_REGIONS = 'D:\\USERDATA\\Documents\\4git\\parsers\\tenders\\keywords\\bereza_regions.txt'
 BASE_URL = 'https://agregatoreat.ru/purchases/new'
 
 
@@ -24,6 +25,7 @@ def get_keywords(filename):
 # random.shuffle(keywords)
 
 def parse_page(keyword, driver):
+    
     searchbox = driver.find_element_by_xpath('//div[@class="filter-rs"]/input')
     searchbox.send_keys(keyword)
 
@@ -33,6 +35,7 @@ def parse_page(keyword, driver):
     delay = random.randint(6, 15)
     try:
         WebDriverWait(driver, delay).until(EC.presence_of_element_located((By.XPATH, '//div[@class="container"]//div[@class="row"]//div[contains(@class, "purchase")]')))
+        # EC.element_to_be_clickable()
         # print('\t row - ok', end='')
         elements = driver.find_elements_by_xpath('//div[@class="purchase flex between-xs wrap m0 mb10 brdr-1 brdr-cl-gray3"]')
         # print('\t elements - ok', end='')
@@ -68,7 +71,7 @@ def parse_page(keyword, driver):
         logging.warning(f'timeout with keyword: {keyword}')
         searchbox.clear()
 
-def save_results(res):
+def save_results(res, logging):
     wb = Workbook()
     ws = wb.active
     headers = ['Номер','Наименование', 'Время до окончания подачи предложений', 'Заказчик', 'Стартовая цена', 'Информация о закупке']
@@ -80,18 +83,28 @@ def save_results(res):
     name = os.path.join(name, 'out', datetime.now().strftime("%d-%m-%Y_%H-%M"))
     results_file_name = name + '.xlsx'
     wb.save(results_file_name)
+    logging.info(f'File {results_file_name} was successfully saved')
     return results_file_name
 
 
-def logging_setup():
-    root_logger= logging.getLogger()
-    handler = logging.FileHandler('reports.log', 'w', 'utf-8')
-    formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
-    handler.setFormatter(formatter)
-    root_logger.addHandler(handler)
+def parsing(keywords, logging):
 
+    btn_all_filters = driver.find_element_by_xpath('//button[@data-v-7755f139][2]')
+    btn_all_filters.click()
 
-def parsing(keywords):
+    WebDriverWait(driver, 2).until(EC.element_to_be_clickable((By.XPATH, '//label[contains(text(), "Субъект РФ")]/following-sibling::div')))
+    regions = get_keywords(FILE_WITH_REGIONS)
+    print(regions)
+    for region in regions:
+        regions_dropdown = driver.find_element_by_xpath('//label[contains(text(), "Субъект РФ")]/following-sibling::div')
+        regions_dropdown.click()
+        regions_dropdown.send_keys(region)
+        
+        options_elements = driver.find_elements_by_xpath('//label[contains(text(), "Субъект РФ")]/following-sibling::div/div[3]/ul/li')[:-2]
+        for el in options_elements:
+            el.click()
+        driver.implicitly_wait(random.randint(1, 3))
+
     for keyword in keywords:
         parse_page(keyword=keyword, driver=driver)
         pagination = driver.find_elements_by_xpath('//div[@class="flex middle-xs center-xs align-center fs13 lh35 cl-black weight-700"]/div')
@@ -106,7 +119,7 @@ def parsing(keywords):
     logging.info('='*36)
 
 
-def sending_email(filename):
+def sending_email(filename, logging):
     body = "Below you find file with actual tenders from Berezka platform"
     contents = [
         body,
@@ -126,17 +139,21 @@ def sending_email(filename):
     logging.info(f'file {filename} successfully sended')
 
 
-
+############################################################
 res = dict()
 
 driver = webdriver.Chrome()
+driver.maximize_window()
 driver.get(BASE_URL)
 
-logging_setup()
-parsing(get_keywords(FILE_WITH_KEYWORDS))
-logging.info(f'Parsed ' + str(len(res)))
-logging.info('='*36)
+root_logger= logging.getLogger()
+handler = logging.FileHandler('reports_bereza.log', 'w', 'utf-8')
+formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+handler.setFormatter(formatter)
+root_logger.addHandler(handler)
 
-sending_email(save_results(res))
+parsing(get_keywords(FILE_WITH_KEYWORDS), logging)
+
+sending_email(save_results(res, logging), logging)
 
 driver.quit()
