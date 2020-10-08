@@ -4,7 +4,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
 from openpyxl import Workbook
-import random, os, logging
+import random, os, logging, time
 from datetime import datetime
 import yagmail
 from config import from_email, password, to_emails, cc, bcc
@@ -25,7 +25,6 @@ def get_keywords(filename):
 # random.shuffle(keywords)
 
 def parse_page(keyword, driver):
-    
     searchbox = driver.find_element_by_xpath('//div[@class="filter-rs"]/input')
     searchbox.send_keys(keyword)
 
@@ -88,22 +87,23 @@ def save_results(res, logging):
 
 
 def parsing(keywords, logging):
-
     btn_all_filters = driver.find_element_by_xpath('//button[@data-v-7755f139][2]')
     btn_all_filters.click()
 
     WebDriverWait(driver, 2).until(EC.element_to_be_clickable((By.XPATH, '//label[contains(text(), "Субъект РФ")]/following-sibling::div')))
     regions = get_keywords(FILE_WITH_REGIONS)
-    print(regions)
+    # print(regions)
     for region in regions:
         regions_dropdown = driver.find_element_by_xpath('//label[contains(text(), "Субъект РФ")]/following-sibling::div')
-        regions_dropdown.click()
+        regions_dropdown_arrow = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//label[contains(text(), "Субъект РФ")]/following-sibling::div/div[1]')))
+
+        # print(regions_dropdown.get_attribute('class'))
         regions_dropdown.send_keys(region)
+        time.sleep(random.randint(1, 3))
         
         options_elements = driver.find_elements_by_xpath('//label[contains(text(), "Субъект РФ")]/following-sibling::div/div[3]/ul/li')[:-2]
         for el in options_elements:
             el.click()
-        driver.implicitly_wait(random.randint(1, 3))
 
     for keyword in keywords:
         parse_page(keyword=keyword, driver=driver)
