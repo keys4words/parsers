@@ -10,9 +10,18 @@ import yagmail
 from config import from_email, password, to_emails, cc, bcc
 
 
-FILE_WITH_KEYWORDS = 'D:\\USERDATA\\Documents\\4git\\parsers\\tenders\\keywords\\bereza.txt'
-FILE_WITH_REGIONS = 'D:\\USERDATA\\Documents\\4git\\parsers\\tenders\\keywords\\bereza_regions.txt'
+FILE_WITH_KEYWORDS = 'D:\\USERDATA\\Documents\\4git\\parsers\\tenders\\keywords\\bz_keywords.txt'
+FILE_WITH_REGIONS = 'D:\\USERDATA\\Documents\\4git\\parsers\\tenders\\keywords\\bz_regions.txt'
 BASE_URL = 'https://agregatoreat.ru/purchases/new'
+
+
+def set_logger():
+    root_logger = logging.getLogger('bz')
+    handler = logging.FileHandler('logs\\reports_bz.log', 'a', 'utf-8')
+    formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+    handler.setFormatter(formatter)
+    root_logger.addHandler(handler)
+    root_logger.setLevel(logging.DEBUG)
 
 
 def get_keywords(filename):
@@ -32,6 +41,7 @@ def parse_page(keyword, driver):
     searchBtn.click()
 
     delay = random.randint(6, 15)
+    root_logger = logging.getLogger('bz')
     try:
         WebDriverWait(driver, delay).until(EC.presence_of_element_located((By.XPATH, '//div[@class="container"]//div[@class="row"]//div[contains(@class, "purchase")]')))
         # EC.element_to_be_clickable()
@@ -64,13 +74,13 @@ def parse_page(keyword, driver):
                            'price': price,
                            'info': info}
             
-        logging.info(f'parsing OK with keyword: {keyword}')
+        root_logger.info(f'parsing OK with keyword: {keyword}')
         searchbox.clear()
     except TimeoutException:
-        logging.warning(f'timeout with keyword: {keyword}')
+        root_logger.warning(f'timeout with keyword: {keyword}')
         searchbox.clear()
 
-def save_results(res, logging):
+def save_results(res):
     wb = Workbook()
     ws = wb.active
     headers = ['Номер','Наименование', 'Время до окончания подачи предложений', 'Заказчик', 'Стартовая цена', 'Информация о закупке']
@@ -82,24 +92,28 @@ def save_results(res, logging):
     name = os.path.join(name, 'out', datetime.now().strftime("%d-%m-%Y_%H-%M"))
     results_file_name = name + '.xlsx'
     wb.save(results_file_name)
-    logging.info(f'File {results_file_name} was successfully saved')
+    root_logger = logging.getLogger('bz')
+    root_logger.info(f'File {results_file_name} was successfully saved')
     return results_file_name
+        
 
-
-def parsing(keywords, logging):
+def parsing(keywords):
     btn_all_filters = driver.find_element_by_xpath('//button[@data-v-7755f139][2]')
     btn_all_filters.click()
 
     WebDriverWait(driver, 2).until(EC.element_to_be_clickable((By.XPATH, '//label[contains(text(), "Субъект РФ")]/following-sibling::div')))
     regions = get_keywords(FILE_WITH_REGIONS)
     # print(regions)
-    for region in regions:
+    for index, region in enumerate(regions):
         regions_dropdown = driver.find_element_by_xpath('//label[contains(text(), "Субъект РФ")]/following-sibling::div')
         regions_dropdown_arrow = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//label[contains(text(), "Субъект РФ")]/following-sibling::div/div[1]')))
 
         # print(regions_dropdown.get_attribute('class'))
         regions_dropdown.send_keys(region)
-        time.sleep(random.randint(1, 3))
+        time.sleep(random.randint(1, 2))
+
+        if index%4 == 0:
+            driver.execute_script('window.scrollBy(0, 10)', '')
         
         options_elements = driver.find_elements_by_xpath('//label[contains(text(), "Субъект РФ")]/following-sibling::div/div[3]/ul/li')[:-2]
         for el in options_elements:
@@ -115,11 +129,12 @@ def parsing(keywords, logging):
                 driver.get(new_url)
                 parse_page(keyword=keyword, driver=driver)
                 counter += 1
-    logging.info(f'Parsed ' + str(len(res)))
-    logging.info('='*36)
+    root_logger = logging.getLogger('bz')
+    root_logger.info(f'Parsed ' + str(len(res)) + ' tenders')
+    root_logger.info('='*36)
 
 
-def sending_email(filename, logging):
+def sending_email(filename):
     body = "Below you find file with actual tenders from Berezka platform"
     contents = [
         body,
@@ -136,7 +151,8 @@ def sending_email(filename, logging):
         contents=contents,
         # attachments=filename,
     )
-    logging.info(f'file {filename} successfully sended')
+    root_logger = logging.getLogger('bz')
+    root_logger.info(f'File {filename} was successfully sended')
 
 
 ############################################################
@@ -146,14 +162,14 @@ driver = webdriver.Chrome()
 driver.maximize_window()
 driver.get(BASE_URL)
 
-root_logger= logging.getLogger()
-handler = logging.FileHandler('reports_bereza.log', 'w', 'utf-8')
-formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
-handler.setFormatter(formatter)
-root_logger.addHandler(handler)
+set_logger()
 
-parsing(get_keywords(FILE_WITH_KEYWORDS), logging)
+parsing(get_keywords(FILE_WITH_KEYWORDS))
 
-sending_email(save_results(res, logging), logging)
+if len(res)>= 1:
+    sending_email(save_results(res))
+else:
+    root_logger = logging.getLogger('bz')
+    root_logger.info('There is NO tenders')
 
 driver.quit()
