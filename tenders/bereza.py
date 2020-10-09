@@ -2,7 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException, ElementClickInterceptedException
 from openpyxl import Workbook
 import random, os, logging, time
 from datetime import datetime
@@ -110,14 +110,18 @@ def parsing(keywords):
 
         # print(regions_dropdown.get_attribute('class'))
         regions_dropdown.send_keys(region)
-        time.sleep(random.randint(1, 2))
+        time.sleep(random.randint(2, 3))
 
         if index%4 == 0:
-            driver.execute_script('window.scrollBy(0, 10)', '')
+            driver.execute_script('window.scrollBy(0, 20)', '')
         
         options_elements = driver.find_elements_by_xpath('//label[contains(text(), "Субъект РФ")]/following-sibling::div/div[3]/ul/li')[:-2]
         for el in options_elements:
-            el.click()
+            try:
+                el.click()
+            except ElementClickInterceptedException:
+                driver.execute_script('window.scrollBy(0, 20)', '')
+                el.click()
 
     for keyword in keywords:
         parse_page(keyword=keyword, driver=driver)
@@ -131,7 +135,6 @@ def parsing(keywords):
                 counter += 1
     root_logger = logging.getLogger('bz')
     root_logger.info(f'Parsed ' + str(len(res)) + ' tenders')
-    root_logger.info('='*36)
 
 
 def sending_email(filename):
@@ -171,5 +174,7 @@ if len(res)>= 1:
 else:
     root_logger = logging.getLogger('bz')
     root_logger.info('There is NO tenders')
+root_logger.info('='*36)
+
 
 driver.quit()
