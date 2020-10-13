@@ -10,10 +10,20 @@ import yagmail
 from config import from_email, password, to_emails, cc, bcc
 
 
-# FILE_WITH_KEYWORDS = 'D:\\USERDATA\\Documents\\4git\\parsers\\tenders\\keywords\\zm_keywords.txt'
-FILE_WITH_KEYWORDS = 'D:\\USERDATA\\Documents\\4git\\parsers\\tenders\\keywords\\test.txt'
-FILE_WITH_REGIONS = 'D:\\USERDATA\\Documents\\4git\\parsers\\tenders\\keywords\\zm_regions.txt'
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+FILE_WITH_KEYWORDS = os.path.join(BASE_DIR, 'keywords', 'zm_keywords.txt')
+FILE_WITH_REGIONS = os.path.join(BASE_DIR, 'keywords', 'zm_regions.txt')
 BASE_URL = 'https://zakupki.mos.ru/purchase/list?page=1&perPage=50&sortField=relevance&sortDesc=true&filter=%7B%22auctionSpecificFilter%22%3A%7B%7D%2C%22needSpecificFilter%22%3A%7B%7D%2C%22tenderSpecificFilter%22%3A%7B%7D%7D&state=%7B%22currentTab%22%3A1%7D'
+
+
+def set_logger():
+    root_logger = logging.getLogger('zm')
+    handler = logging.FileHandler('logs\\reports_zm.log', 'a', 'utf-8')
+    formatter = logging.Formatter(
+        '%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+    handler.setFormatter(formatter)
+    root_logger.addHandler(handler)
+    root_logger.setLevel(logging.DEBUG)
 
 
 def show_filters(driver):
@@ -43,6 +53,8 @@ def save_results(res):
 
     results_file_name = name + '_zm.xlsx'
     wb.save(results_file_name)
+    root_logger = logging.getLogger('zm')
+    root_logger.info(f'File {results_file_name} was successfully saved')
     return results_file_name
 
 
@@ -50,7 +62,7 @@ def parse_page(driver):
     WebDriverWait(driver, 2).until(EC.presence_of_element_located((By.XPATH, '//div[@class="PublicListStyles__PublicListContentContainer-sc-1q0smku-1 kDgLPV"]')))
     elements = driver.find_elements_by_xpath('//div[@class="PublicListStyles__PublicListContentContainer-sc-1q0smku-1 kDgLPV"]/div')
     for el in elements:
-        WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.XPATH, './/a[contains(@class, "MainInfoNumberHeader")]/span')))
+        WebDriverWait(driver, 4).until(EC.presence_of_element_located((By.XPATH, './/a[contains(@class, "MainInfoNumberHeader")]/span')))
         number = el.find_element_by_xpath('.//a[contains(@class, "MainInfoNumberHeader")]/span')
         number = number.text
         name = el.find_element_by_xpath('.//a[contains(@class, "MainInfoNameHeader")]/span')
@@ -89,13 +101,16 @@ def parse_page(driver):
 
 
 def parsing(driver, keywords):
+    root_logger = logging.getLogger('zm')
     for keyword in keywords:
         page_num = 1
         url = f'https://zakupki.mos.ru/purchase/list?page={page_num}&perPage=50&sortField=relevance&sortDesc=true&filter=%7B%22nameLike%22%3A%22{keyword}%22%2C%22auctionSpecificFilter%22%3A%7B%22stateIdIn%22%3A%5B19000002%5D%7D%2C%22needSpecificFilter%22%3A%7B%22stateIdIn%22%3A%5B20000002%5D%7D%2C%22tenderSpecificFilter%22%3A%7B%22stateIdIn%22%3A%5B5%5D%7D%7D&state=%7B%22currentTab%22%3A1%7D'
         driver.get(url)
         try:
             parse_page(driver=driver)
+            root_logger.info(f'parsing OK with keyword: {keyword}')
         except TimeoutException:
+            root_logger.warning(f'timeout with keyword: {keyword}')
             continue
         pagination = driver.find_elements_by_xpath('.//div[contains(@class, "PublicListPaginatorStyles")]//a[@type="pageItem"]')
         if len(pagination) > 1 and page_num != len(pagination):
@@ -106,13 +121,42 @@ def parsing(driver, keywords):
                 parse_page(driver=driver)
             except TimeoutException:
                 continue
+    root_logger.info(f'Parsed ' + str(len(res)) + ' tenders')
             
-        
+
+def sending_email(filename):
+    body = "Below you find file with actual tenders from Zakupki Mos"
+    contents = [
+        body,
+        filename
+    ]
+
+    yagmail.register(from_email, password)
+    yag = yagmail.SMTP(from_email)
+    yag.send(
+        to=to_emails,
+        subject="Zakupki Mos",
+        cc=cc,
+        bcc=bcc,
+        contents=contents,
+        # attachments=filename,
+    )
+    root_logger = logging.getLogger('zm')
+    root_logger.info(f'File {filename} was successfully sended')
+
+
 
 res = dict()
 
 driver = webdriver.Chrome()
 driver.maximize_window()
+set_logger()
 
 parsing(driver, get_keywords(FILE_WITH_KEYWORDS))
-print(save_results(res))
+sending_email(save_results(res))
+
+root_logger = logging.getLogger('zm')
+root_logger.info('There is NO tenders')
+root_logger.info('='*36)
+
+driver.quit()
