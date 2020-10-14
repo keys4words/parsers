@@ -1,4 +1,9 @@
-import requests, random, os, logging, time, re
+import requests
+import random
+import os
+import logging
+import time
+import re
 from bs4 import BeautifulSoup
 from openpyxl import Workbook
 from datetime import datetime
@@ -10,17 +15,8 @@ from config import from_email, password, to_emails2, bcc
 BASE_URL = 'https://zakupki.gov.ru'
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 FILE_WITH_INNS = os.path.join(BASE_DIR, 'keywords', 'test.txt')
-HEADERS = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.122 Safari/537.36', 'accept': '*/*'}
-
-
-def set_logger():
-    root_logger = logging.getLogger('zg')
-    handler = logging.FileHandler('logs\\zg.log', 'w', 'utf-8')
-    formatter = logging.Formatter(
-        '%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
-    handler.setFormatter(formatter)
-    root_logger.addHandler(handler)
-    root_logger.setLevel(logging.DEBUG)
+HEADERS = {
+    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.122 Safari/537.36', 'accept': '*/*'}
 
 
 def get_inns(filename):
@@ -46,7 +42,7 @@ def parsing(inns):
         if _html.status_code == 200:
             soup = BeautifulSoup(_html.text, 'html.parser')
             if soup.find_all(
-                    'div', class_='search-registry-entry-block box-shadow-search-input'):
+                'div', class_='search-registry-entry-block box-shadow-search-input'):
                 elements = soup.find_all(
                     'div', class_='search-registry-entry-block box-shadow-search-input')
                 for el in elements:
@@ -55,14 +51,13 @@ def parsing(inns):
                     tender_url = BASE_URL + number.get('href')
                     number = number.text.strip().replace('\n', '')
                     name = el.find(text=re.compile("Объект закупки")
-                                   ).parent.find_next_sibling()
+                                ).parent.find_next_sibling()
                     name = name.text.strip().replace('\n', '')
                     # print(f'inn#{inn} number is {number}')
                     last_customer = ''
                     last_customer_url = ''
                     try:
-                        customer = el.find(text=re.compile(
-                            "Заказчик")).parent.find_next_sibling().a
+                        customer = el.find(text=re.compile("Заказчик")).parent.find_next_sibling().a
                         customer_url = BASE_URL + customer.get('href')
                         customer = customer.text.strip().replace('\n', '')
                         last_customer = customer
@@ -95,64 +90,16 @@ def parsing(inns):
                 root_logger.info(
                     f'Parsed {str(len(elements))} tenders for customer with INN #{inn}')
             else:
-                root_logger.warning(
-                    f'0 active tenders for customer with INN #{inn}')
+                root_logger.warning(f'0 active tenders for customer with INN #{inn}')
                 continue
         else:
             root_logger.warning(f'page {url} is not available')
             continue
     root_logger.info('='*36)
-
-
-def save_results(res):
-    wb = Workbook()
-    ws = wb.active
-    headers = ['Номер', 'Объект закупки', 'Ссылка на тендер', 'Заказчик',
-               'Ссылка на Заказчика', 'Начальная цена', 'Размещено', 'Обновлено', 'Окончание подачи заявок']
-    ws.append(headers)
-    for tender_number, tender_info in res.items():
-        ws.append([tender_number, tender_info['name'], tender_info['url'], tender_info['customer'],
-                   tender_info['customer_url'], tender_info['price'], tender_info['release_date'], tender_info['refreshing_date'], tender_info['ending_date']])
-
-    name = os.path.abspath(os.path.dirname(__file__))
-    name = os.path.join(name, 'out', datetime.now().strftime("%d-%m-%Y_%H-%M"))
-
-    results_file_name = name + '_zg.xlsx'
-    wb.save(results_file_name)
-    root_logger = logging.getLogger('zg')
-    root_logger.info(f'File {results_file_name} was successfully saved')
-    return results_file_name
-
-
-
-
-def sending_email(filename):
-    body = "Below you find file with tenders from zakupki.gov"
-    contents = [
-        body,
-        filename
-    ]
-
-    yagmail.register(from_email, password)
-    yag = yagmail.SMTP(from_email)
-    yag.send(
-        to=to_emails2,
-        subject="zakupki-gov",
-        bcc=bcc,
-        contents=contents,
-    )
-    root_logger = logging.getLogger('zg')
-    root_logger.info(f'File {filename} was successfully sended')
-
+        
 
 
 res = dict()
 
-set_logger()
-
 parsing(get_inns(FILE_WITH_INNS))
-# print(res)
-sending_email(save_results(res))
-
-root_logger = logging.getLogger('zg')
-root_logger.info('='*36)
+print(res)
