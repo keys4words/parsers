@@ -87,9 +87,14 @@ def save_results(res):
     ws.append(headers)
     for tender_number, tender_info in res.items():
         ws.append([tender_number, tender_info['name'], tender_info['timer'], tender_info['customer'], tender_info['price'], tender_info['info']])
+    
+    ws.column_dimensions['A'].width = 20
+    ws.column_dimensions['B'].width = 100
+    ws.column_dimensions['D'].width = 60
+    ws.column_dimensions['E'].width = 20
 
     name = os.path.join(BASE_DIR, 'out', datetime.now().strftime("%d-%m-%Y_%H-%M"))
-    results_file_name = name + '.xlsx'
+    results_file_name = name + '_bz.xlsx'
     wb.save(results_file_name)
     root_logger = logging.getLogger('bz')
     root_logger.info(f'File {results_file_name} was successfully saved')

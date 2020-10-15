@@ -48,6 +48,10 @@ def save_results(res):
     for tender_number, tender_info in res.items():
         ws.append([tender_number, tender_info['name'], tender_info['name_url'], tender_info['customer'], tender_info['customer_url'], tender_info['price'], tender_info['region'], tender_info['law'], tender_info['tdate']])
 
+    ws.column_dimensions['B'].width = 100
+    ws.column_dimensions['D'].width = 60
+    ws.column_dimensions['F'].width = 30
+
     name = os.path.abspath(os.path.dirname(__file__))
     name = os.path.join(name, 'out', datetime.now().strftime("%d-%m-%Y_%H-%M"))
 

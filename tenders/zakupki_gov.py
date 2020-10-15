@@ -53,7 +53,7 @@ def parsing(inns):
                     number = el.find(
                         'div', class_='registry-entry__header-mid__number').a
                     tender_url = BASE_URL + number.get('href')
-                    number = number.text.strip().replace('\n', '')
+                    number = number.text.strip().replace('\n', '').replace('№ ', '')
                     name = el.find(text=re.compile("Объект закупки")
                                    ).parent.find_next_sibling()
                     name = name.text.strip().replace('\n', '')
@@ -113,6 +113,13 @@ def save_results(res):
     for tender_number, tender_info in res.items():
         ws.append([tender_number, tender_info['name'], tender_info['url'], tender_info['customer'],
                    tender_info['customer_url'], tender_info['price'], tender_info['release_date'], tender_info['refreshing_date'], tender_info['ending_date']])
+
+    ws.column_dimensions['A'].width = 30
+    ws.column_dimensions['B'].width = 100
+    ws.column_dimensions['D'].width = 80
+    ws.column_dimensions['F'].width = 30
+    ws.column_dimensions['G'].width = 30
+    ws.column_dimensions['H'].width = 30
 
     name = os.path.abspath(os.path.dirname(__file__))
     name = os.path.join(name, 'out', datetime.now().strftime("%d-%m-%Y_%H-%M"))
