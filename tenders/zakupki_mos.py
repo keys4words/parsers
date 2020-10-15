@@ -80,13 +80,16 @@ def parse_page(driver):
         customer_url = customer_url.get_attribute('href')
         price = el.find_element_by_xpath('.//div[contains(@class, "PriceInfoNumber")]')
         price = price.text.replace('&nbsp;', '')
-        region = el.find_elements_by_xpath('.//div[contains(@class, "AdditionalInfoHeader")]/span')[1]
+        region = el.find_element_by_xpath(
+            './/div[contains(@class, "CardStyles__AdditionalInfoContainer")]/div[1]/span')
         region = region.text
-        tdate_or_law = el.find_elements_by_xpath('.//div[contains(@class, "AdditionalInfoHeader")]/span')[2]
+        tdate_or_law = el.find_element_by_xpath(
+            './/div[contains(@class, "CardStyles__AdditionalInfoContainer")]/div[2]/span')
         tdate_or_law = tdate_or_law.text
         if 'ФЗ' in tdate_or_law:
             law = tdate_or_law
-            tdate = el.find_elements_by_xpath('.//div[contains(@class, "AdditionalInfoHeader")]/span')[3]
+            tdate = el.find_element_by_xpath(
+                './/div[contains(@class, "CardStyles__AdditionalInfoContainer")]/div[3]/span')
             tdate = tdate.text
         else:
             law = ''
