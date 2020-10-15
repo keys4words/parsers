@@ -18,7 +18,7 @@ BASE_URL = 'https://zakupki.mos.ru/purchase/list?page=1&perPage=50&sortField=rel
 
 def set_logger():
     root_logger = logging.getLogger('zm')
-    handler = logging.FileHandler('logs\\reports_zm.log', 'a', 'utf-8')
+    handler = logging.FileHandler('logs\\zm.log', 'a', 'utf-8')
     formatter = logging.Formatter(
         '%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
     handler.setFormatter(formatter)
@@ -156,7 +156,6 @@ parsing(driver, get_keywords(FILE_WITH_KEYWORDS))
 sending_email(save_results(res))
 
 root_logger = logging.getLogger('zm')
-root_logger.info('There is NO tenders')
 root_logger.info('='*36)
 
 driver.quit()

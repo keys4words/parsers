@@ -18,7 +18,7 @@ BASE_URL = 'https://agregatoreat.ru/purchases/new'
 
 def set_logger():
     root_logger = logging.getLogger('bz')
-    handler = logging.FileHandler('logs\\reports_bz.log', 'w', 'utf-8')
+    handler = logging.FileHandler('logs\\bz.log', 'w', 'utf-8')
     formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
     handler.setFormatter(formatter)
     root_logger.addHandler(handler)
@@ -32,7 +32,6 @@ def get_keywords(filename):
             keywords.append(line.strip())
         return keywords
 
-# random.shuffle(keywords)
 
 def parse_page(keyword, driver):
     searchbox = driver.find_element_by_xpath('//div[@class="filter-rs"]/input')
