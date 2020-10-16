@@ -18,7 +18,7 @@ BASE_URL = 'https://zakupki.mos.ru/purchase/list?page=1&perPage=50&sortField=rel
 
 def set_logger():
     root_logger = logging.getLogger('zm')
-    handler = logging.FileHandler('logs\\zm.log', 'a', 'utf-8')
+    handler = logging.FileHandler('logs\\zm.log', 'w', 'utf-8')
     formatter = logging.Formatter(
         '%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
     handler.setFormatter(formatter)
@@ -58,7 +58,7 @@ def save_results(res):
     results_file_name = name + '_zm.xlsx'
     wb.save(results_file_name)
     root_logger = logging.getLogger('zm')
-    root_logger.info(f'File {results_file_name} was successfully saved')
+    root_logger.info(f'File {results_file_name} was saved')
     return results_file_name
 
 
@@ -149,7 +149,7 @@ def sending_email(filename):
         # attachments=filename,
     )
     root_logger = logging.getLogger('zm')
-    root_logger.info(f'File {filename} was successfully sended')
+    root_logger.info(f'File was sended to {to_emails}, copy: {cc}, blind copy: {bcc}')
 
 
 
@@ -163,6 +163,6 @@ parsing(driver, get_keywords(FILE_WITH_KEYWORDS))
 sending_email(save_results(res))
 
 root_logger = logging.getLogger('zm')
-root_logger.info('='*36)
+root_logger.info('='*46)
 
 driver.quit()

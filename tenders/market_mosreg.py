@@ -7,11 +7,22 @@ from openpyxl import Workbook
 import random, os, logging, time
 from datetime import datetime
 import yagmail
-from config import from_email, password, to_emails
+from config import from_email, password, to_emails, cc, bcc
 
 
-FILE_WITH_KEYWORDS = 'D:\\USERDATA\\Documents\\4git\\parsers\\tenders\\keywords\\test.txt'
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+FILE_WITH_KEYWORDS = os.path.join(BASE_DIR, 'keywords', 'mm_keywords.txt')
 BASE_URL = 'https://market.mosreg.ru/Trade'
+
+
+def set_logger():
+    root_logger = logging.getLogger('mm')
+    handler = logging.FileHandler('logs\\mm.log', 'w', 'utf-8')
+    formatter = logging.Formatter(
+        '%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+    handler.setFormatter(formatter)
+    root_logger.addHandler(handler)
+    root_logger.setLevel(logging.DEBUG)
 
 
 def get_keywords(filename):
@@ -23,15 +34,29 @@ def get_keywords(filename):
 
 
 def parse_page(keyword, driver):
-    print(keyword)
+    # print(keyword)
+    root_logger = logging.getLogger('mm')
+
+    # insert keyword 
     searchbox = driver.find_elements_by_xpath('//input[@data-bind="value: pageVM.filterTradeName"]')[0]
     searchbox.send_keys(keyword)
 
+    # click search button
     searchBtn = driver.find_element_by_xpath('//button[@data-bind="click: pageVM.searchData"]')
     searchBtn.click()
 
-    # driver.implicitly_wait(5)
-    time.sleep(5)
+    # set 100 results on page mode
+    time.sleep(1)
+    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+    WebDriverWait(driver, 2).until(EC.presence_of_element_located(
+        (By.XPATH, '//div[@class="pagination__select"]//span[@class="select2-selection__arrow"]')))
+    qtyOnPage = driver.find_element_by_xpath(
+        '//div[@class="pagination__select"]//span[@class="select2-selection__arrow"]')
+    qtyOnPage.click()
+    selectHundred = driver.find_element_by_xpath(
+        '//ul[@id="select2-selectPagination-results"]/li[5]')
+    selectHundred.click()
+
     delay = random.randint(6, 15)
     try:
         WebDriverWait(driver, delay).until(EC.presence_of_element_located((By.XPATH, '//div[@data-bind="foreach: pageVM.listTradesTest"]/div')))
@@ -70,63 +95,74 @@ def parse_page(keyword, driver):
                            'price': price,
                            'customer_card': customer_card }
             
-        logging.info(f'parsing OK with keyword: {keyword}')
+        root_logger.info(f'parsed {len(elements)} tenders with keyword: {keyword}')
         searchbox.clear()
     except TimeoutException:
-        logging.warning(f'timeout with keyword: {keyword}')
+        root_logger.warning(f'timeout with keyword: {keyword}')
         # print('something goes wrong')
         searchbox.clear()
 
 
-def parsing(keywords):
+def parsing(keywords, driver):
     for keyword in keywords:
         parse_page(keyword=keyword, driver=driver)
-        # pagination = driver.find_elements_by_xpath('//div[@class="flex middle-xs center-xs align-center fs13 lh35 cl-black weight-700"]/div')
-        # if len(pagination) > 1:
-        #     counter = 1
-        #     while counter < len(pagination):
-        #         new_url = baseUrl + '/page/' + str(counter+1)
-        #         driver.get(new_url)
-        #         parse_page(keyword=keyword, driver=driver)
-        #         counter += 1
-    logging.info(f'Parsed ' + str(len(res)))
-    logging.info('='*36)
 
 
 def save_results(res):
     wb = Workbook()
     ws = wb.active
-    headers = ['Номер','Наименование', 'Ссылка', 'Начало приема заявок', 'Окончание приема заявок', 'Карточка Заказчика', 'Цена']
+    headers = ['Номер', 'Наименование', 'Ссылка', 'Начало приема заявок',
+               'Окончание приема заявок', 'Цена', 'Карточка Заказчика']
     ws.append(headers)
     for tender_number, tender_info in res.items():
         ws.append([tender_number, tender_info['name'], tender_info['url'], tender_info['start'], tender_info['end'], tender_info['price'], tender_info['customer_card']])
 
+    ws.column_dimensions['B'].width = 100
+    ws.column_dimensions['D'].width = 30
+    ws.column_dimensions['E'].width = 30
+    ws.column_dimensions['F'].width = 40
     name = os.path.abspath(os.path.dirname(__file__))
     name = os.path.join(name, 'out', datetime.now().strftime("%d-%m-%Y_%H-%M"))
-    results_file_name = name + '_mosreg.xlsx'
+    results_file_name = name + '_mm.xlsx'
     wb.save(results_file_name)
+    root_logger = logging.getLogger('mm')
+    root_logger.info(f'File {results_file_name} was saved')
     return results_file_name
 
 
+def sending_email(filename):
+    body = "Below you find file with actual tenders from Market Mosreg"
+    contents = [
+        body,
+        filename
+    ]
+
+    yagmail.register(from_email, password)
+    yag = yagmail.SMTP(from_email)
+    yag.send(
+        to=to_emails,
+        subject="market.mosreg.ru",
+        cc=cc,
+        bcc=bcc,
+        contents=contents,
+        # attachments=filename,
+    )
+    root_logger = logging.getLogger('mm')
+    root_logger.info(
+        f'File was sended to {to_emails}, copy: {cc}, blind copy: {bcc}')
+
+
+driver = webdriver.Chrome()
+driver.maximize_window()
+driver.get(BASE_URL)
 
 res = dict()
 
-driver = webdriver.Chrome()
-driver.get(BASE_URL)
+set_logger()
+parsing(get_keywords(FILE_WITH_KEYWORDS), driver)
+sending_email(save_results(res))
 
-root_logger= logging.getLogger()
-handler = logging.FileHandler('reports_mosreg.log', 'w', 'utf-8')
-formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
-handler.setFormatter(formatter)
-root_logger.addHandler(handler)
-
-keywords = get_keywords(FILE_WITH_KEYWORDS)
-parsing(keywords)
-
-logging.info(f'Parsed ' + str(len(res)))
-logging.info('='*36)
-
-save_results(res)
-# sending_email(save_results(res))
+root_logger = logging.getLogger('mm')
+root_logger.info('='*46)
     
 driver.quit()

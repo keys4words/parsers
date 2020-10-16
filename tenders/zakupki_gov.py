@@ -146,7 +146,7 @@ def sending_email(filename):
         contents=contents,
     )
     root_logger = logging.getLogger('zg')
-    root_logger.info(f'File {filename} was successfully sended')
+    root_logger.info(f'File was sended to {to_emails2}, blind copy: {bcc}')
 
 
 
@@ -159,4 +159,4 @@ parsing(get_inns(FILE_WITH_INNS))
 sending_email(save_results(res))
 
 root_logger = logging.getLogger('zg')
-root_logger.info('='*36)
+root_logger.info('='*46)

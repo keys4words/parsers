@@ -18,7 +18,7 @@ BASE_URL = 'https://agregatoreat.ru/purchases/new'
 
 def set_logger():
     root_logger = logging.getLogger('bz')
-    handler = logging.FileHandler('logs\\bz.log', 'w', 'utf-8')
+    handler = logging.FileHandler('logs\\bz.log', 'a', 'utf-8')
     formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
     handler.setFormatter(formatter)
     root_logger.addHandler(handler)
@@ -163,7 +163,7 @@ def sending_email(filename):
         # attachments=filename,
     )
     root_logger = logging.getLogger('bz')
-    root_logger.info(f'File {filename} was successfully sended')
+    root_logger.info(f'File was sended to {to_emails}, copy: {cc}, blind copy: {bcc}')
 
 
 ############################################################
