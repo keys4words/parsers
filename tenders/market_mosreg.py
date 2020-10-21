@@ -43,6 +43,7 @@ def parse_page(keyword, driver):
 
     # click search button
     searchBtn = driver.find_element_by_xpath('//button[@data-bind="click: pageVM.searchData"]')
+    WebDriverWait(driver, 2).until(EC.element_to_be_clickable((By.XPATH, '//button[@data-bind="click: pageVM.searchData"]')))
     searchBtn.click()
 
     # set 100 results on page mode

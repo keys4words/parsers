@@ -63,8 +63,10 @@ def save_results(res):
 
 
 def parse_page(driver):
-    WebDriverWait(driver, 2).until(EC.presence_of_element_located((By.XPATH, '//div[@class="PublicListStyles__PublicListContentContainer-sc-1q0smku-1 kDgLPV"]')))
-    elements = driver.find_elements_by_xpath('//div[@class="PublicListStyles__PublicListContentContainer-sc-1q0smku-1 kDgLPV"]/div')
+    WebDriverWait(driver, 2).until(EC.presence_of_element_located(
+        (By.XPATH, '//div[contains(@class, "PublicListContentContainer")]')))
+    elements = driver.find_elements_by_xpath(
+        '//div[contains(@class, "PublicListContentContainer")]/div')
     for el in elements:
         WebDriverWait(driver, 4).until(EC.presence_of_element_located((By.XPATH, './/a[contains(@class, "MainInfoNumberHeader")]/span')))
         number = el.find_element_by_xpath('.//a[contains(@class, "MainInfoNumberHeader")]/span')
