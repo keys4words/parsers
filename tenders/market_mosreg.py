@@ -53,6 +53,8 @@ def parse_page(keyword, driver):
         (By.XPATH, '//div[@class="pagination__select"]//span[@class="select2-selection__arrow"]')))
     qtyOnPage = driver.find_element_by_xpath(
         '//div[@class="pagination__select"]//span[@class="select2-selection__arrow"]')
+    WebDriverWait(driver, 6).until(EC.element_to_be_clickable(
+        (By.XPATH, '//div[@class="pagination__select"]//span[@class="select2-selection__arrow"]')))
     qtyOnPage.click()
     selectHundred = driver.find_element_by_xpath(
         '//ul[@id="select2-selectPagination-results"]/li[5]')
