@@ -2,7 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException, ElementClickInterceptedException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException, ElementClickInterceptedException, ElementNotInteractableException
 from openpyxl import Workbook
 import random, os, logging, time
 from datetime import datetime
@@ -10,14 +10,15 @@ import yagmail
 from config import from_email, password, to_emails, cc, bcc
 
 
-FILE_WITH_KEYWORDS = 'D:\\USERDATA\\Documents\\4git\\parsers\\tenders\\keywords\\bz_keywords.txt'
-FILE_WITH_REGIONS = 'D:\\USERDATA\\Documents\\4git\\parsers\\tenders\\keywords\\bz_regions.txt'
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+FILE_WITH_KEYWORDS = os.path.join(BASE_DIR, 'keywords', 'bz_keywords.txt')
+FILE_WITH_REGIONS = os.path.join(BASE_DIR, 'keywords', 'bz_regions.txt')
 BASE_URL = 'https://agregatoreat.ru/purchases/new'
 
 
 def set_logger():
     root_logger = logging.getLogger('bz')
-    handler = logging.FileHandler('logs\\reports_bz.log', 'a', 'utf-8')
+    handler = logging.FileHandler('logs\\bz.log', 'a', 'utf-8')
     formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
     handler.setFormatter(formatter)
     root_logger.addHandler(handler)
@@ -31,7 +32,6 @@ def get_keywords(filename):
             keywords.append(line.strip())
         return keywords
 
-# random.shuffle(keywords)
 
 def parse_page(keyword, driver):
     searchbox = driver.find_element_by_xpath('//div[@class="filter-rs"]/input')
@@ -87,10 +87,14 @@ def save_results(res):
     ws.append(headers)
     for tender_number, tender_info in res.items():
         ws.append([tender_number, tender_info['name'], tender_info['timer'], tender_info['customer'], tender_info['price'], tender_info['info']])
+    
+    ws.column_dimensions['A'].width = 20
+    ws.column_dimensions['B'].width = 100
+    ws.column_dimensions['D'].width = 60
+    ws.column_dimensions['E'].width = 20
 
-    name = os.path.abspath(os.path.dirname(__file__))
-    name = os.path.join(name, 'out', datetime.now().strftime("%d-%m-%Y_%H-%M"))
-    results_file_name = name + '.xlsx'
+    name = os.path.join(BASE_DIR, 'out', datetime.now().strftime("%d-%m-%Y_%H-%M"))
+    results_file_name = name + '_bz.xlsx'
     wb.save(results_file_name)
     root_logger = logging.getLogger('bz')
     root_logger.info(f'File {results_file_name} was successfully saved')
@@ -104,24 +108,28 @@ def parsing(keywords):
     WebDriverWait(driver, 2).until(EC.element_to_be_clickable((By.XPATH, '//label[contains(text(), "Субъект РФ")]/following-sibling::div')))
     regions = get_keywords(FILE_WITH_REGIONS)
     # print(regions)
-    for index, region in enumerate(regions):
-        regions_dropdown = driver.find_element_by_xpath('//label[contains(text(), "Субъект РФ")]/following-sibling::div')
-        regions_dropdown_arrow = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//label[contains(text(), "Субъект РФ")]/following-sibling::div/div[1]')))
+    # for index, region in enumerate(regions):
+    #     regions_dropdown = driver.find_element_by_xpath('//label[contains(text(), "Субъект РФ")]/following-sibling::div')
+    #     regions_dropdown_arrow = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//label[contains(text(), "Субъект РФ")]/following-sibling::div/div[1]')))
 
-        # print(regions_dropdown.get_attribute('class'))
-        regions_dropdown.send_keys(region)
-        time.sleep(random.randint(2, 3))
+    #     # print(regions_dropdown.get_attribute('class'))
+    #     regions_dropdown.send_keys(region)
+    #     time.sleep(random.randint(2, 3))
 
-        if index%4 == 0:
-            driver.execute_script('window.scrollBy(0, 20)', '')
+    #     if index%4 == 0:
+    #         driver.execute_script('window.scrollBy(0, 20)', '')
         
-        options_elements = driver.find_elements_by_xpath('//label[contains(text(), "Субъект РФ")]/following-sibling::div/div[3]/ul/li')[:-2]
-        for el in options_elements:
-            try:
-                el.click()
-            except ElementClickInterceptedException:
-                driver.execute_script('window.scrollBy(0, 20)', '')
-                el.click()
+    #     options_elements = driver.find_elements_by_xpath('//label[contains(text(), "Субъект РФ")]/following-sibling::div/div[3]/ul/li')[:-2]
+    #     for el in options_elements:
+    #         try:
+    #             el.click()
+    #         except ElementClickInterceptedException:
+    #             driver.execute_script('window.scrollBy(0, 20)', '')
+    #             el.click()
+    #         except ElementNotInteractableException:
+    #             WebDriverWait(driver, 20).until(EC.element_to_be_clickable(
+    #                 (By.XPATH, el))).click()
+                # el.click()
 
     for keyword in keywords:
         parse_page(keyword=keyword, driver=driver)
@@ -129,7 +137,7 @@ def parsing(keywords):
         if len(pagination) > 1:
             counter = 1
             while counter < len(pagination):
-                new_url = baseUrl + '/page/' + str(counter+1)
+                new_url = BASE_URL + '/page/' + str(counter+1)
                 driver.get(new_url)
                 parse_page(keyword=keyword, driver=driver)
                 counter += 1
@@ -155,7 +163,7 @@ def sending_email(filename):
         # attachments=filename,
     )
     root_logger = logging.getLogger('bz')
-    root_logger.info(f'File {filename} was successfully sended')
+    root_logger.info(f'File was sended to {to_emails}, copy: {cc}, blind copy: {bcc}')
 
 
 ############################################################
@@ -169,10 +177,10 @@ set_logger()
 
 parsing(get_keywords(FILE_WITH_KEYWORDS))
 
+root_logger = logging.getLogger('bz')
 if len(res)>= 1:
     sending_email(save_results(res))
 else:
-    root_logger = logging.getLogger('bz')
     root_logger.info('There is NO tenders')
 root_logger.info('='*36)
 

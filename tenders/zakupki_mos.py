@@ -10,9 +10,25 @@ import yagmail
 from config import from_email, password, to_emails, cc, bcc
 
 
+<<<<<<< HEAD:tenders/zakupkiMos.py
 FILE_WITH_KEYWORDS = 'D:\\USERDATA\\Documents\\4git\\parsers\\tenders\\keywords\\zm_keywords.txt'
 FILE_WITH_REGIONS = 'D:\\USERDATA\\Documents\\4git\\parsers\\tenders\\keywords\\zm_regions.txt'
+=======
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+FILE_WITH_KEYWORDS = os.path.join(BASE_DIR, 'keywords', 'zm_keywords.txt')
+FILE_WITH_REGIONS = os.path.join(BASE_DIR, 'keywords', 'zm_regions.txt')
+>>>>>>> 4725fe0773f3a792c250549a3df987f3a3039f37:tenders/zakupki_mos.py
 BASE_URL = 'https://zakupki.mos.ru/purchase/list?page=1&perPage=50&sortField=relevance&sortDesc=true&filter=%7B%22auctionSpecificFilter%22%3A%7B%7D%2C%22needSpecificFilter%22%3A%7B%7D%2C%22tenderSpecificFilter%22%3A%7B%7D%7D&state=%7B%22currentTab%22%3A1%7D'
+
+
+def set_logger():
+    root_logger = logging.getLogger('zm')
+    handler = logging.FileHandler('logs\\zm.log', 'w', 'utf-8')
+    formatter = logging.Formatter(
+        '%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+    handler.setFormatter(formatter)
+    root_logger.addHandler(handler)
+    root_logger.setLevel(logging.DEBUG)
 
 
 def show_filters(driver):
@@ -37,19 +53,27 @@ def save_results(res):
     for tender_number, tender_info in res.items():
         ws.append([tender_number, tender_info['name'], tender_info['name_url'], tender_info['customer'], tender_info['customer_url'], tender_info['price'], tender_info['region'], tender_info['law'], tender_info['tdate']])
 
+    ws.column_dimensions['B'].width = 100
+    ws.column_dimensions['D'].width = 60
+    ws.column_dimensions['F'].width = 30
+
     name = os.path.abspath(os.path.dirname(__file__))
     name = os.path.join(name, 'out', datetime.now().strftime("%d-%m-%Y_%H-%M"))
 
     results_file_name = name + '_zm.xlsx'
     wb.save(results_file_name)
+    root_logger = logging.getLogger('zm')
+    root_logger.info(f'File {results_file_name} was saved')
     return results_file_name
 
 
 def parse_page(driver):
-    WebDriverWait(driver, 2).until(EC.presence_of_element_located((By.XPATH, '//div[@class="PublicListStyles__PublicListContentContainer-sc-1q0smku-1 kDgLPV"]')))
-    elements = driver.find_elements_by_xpath('//div[@class="PublicListStyles__PublicListContentContainer-sc-1q0smku-1 kDgLPV"]/div')
+    WebDriverWait(driver, 2).until(EC.presence_of_element_located(
+        (By.XPATH, '//div[contains(@class, "PublicListContentContainer")]')))
+    elements = driver.find_elements_by_xpath(
+        '//div[contains(@class, "PublicListContentContainer")]/div')
     for el in elements:
-        WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.XPATH, './/a[contains(@class, "MainInfoNumberHeader")]/span')))
+        WebDriverWait(driver, 4).until(EC.presence_of_element_located((By.XPATH, './/a[contains(@class, "MainInfoNumberHeader")]/span')))
         number = el.find_element_by_xpath('.//a[contains(@class, "MainInfoNumberHeader")]/span')
         number = number.text
         name = el.find_element_by_xpath('.//a[contains(@class, "MainInfoNameHeader")]/span')
@@ -63,13 +87,16 @@ def parse_page(driver):
         customer_url = customer_url.get_attribute('href')
         price = el.find_element_by_xpath('.//div[contains(@class, "PriceInfoNumber")]')
         price = price.text.replace('&nbsp;', '')
-        region = el.find_elements_by_xpath('.//div[contains(@class, "AdditionalInfoHeader")]/span')[1]
+        region = el.find_element_by_xpath(
+            './/div[contains(@class, "CardStyles__AdditionalInfoContainer")]/div[1]/span')
         region = region.text
-        tdate_or_law = el.find_elements_by_xpath('.//div[contains(@class, "AdditionalInfoHeader")]/span')[2]
+        tdate_or_law = el.find_element_by_xpath(
+            './/div[contains(@class, "CardStyles__AdditionalInfoContainer")]/div[2]/span')
         tdate_or_law = tdate_or_law.text
         if 'ФЗ' in tdate_or_law:
             law = tdate_or_law
-            tdate = el.find_elements_by_xpath('.//div[contains(@class, "AdditionalInfoHeader")]/span')[3]
+            tdate = el.find_element_by_xpath(
+                './/div[contains(@class, "CardStyles__AdditionalInfoContainer")]/div[3]/span')
             tdate = tdate.text
         else:
             law = ''
@@ -88,13 +115,16 @@ def parse_page(driver):
 
 
 def parsing(driver, keywords):
+    root_logger = logging.getLogger('zm')
     for keyword in keywords:
         page_num = 1
         url = f'https://zakupki.mos.ru/purchase/list?page={page_num}&perPage=50&sortField=relevance&sortDesc=true&filter=%7B%22nameLike%22%3A%22{keyword}%22%2C%22auctionSpecificFilter%22%3A%7B%22stateIdIn%22%3A%5B19000002%5D%7D%2C%22needSpecificFilter%22%3A%7B%22stateIdIn%22%3A%5B20000002%5D%7D%2C%22tenderSpecificFilter%22%3A%7B%22stateIdIn%22%3A%5B5%5D%7D%7D&state=%7B%22currentTab%22%3A1%7D'
         driver.get(url)
         try:
             parse_page(driver=driver)
+            root_logger.info(f'parsing OK with keyword: {keyword}')
         except TimeoutException:
+            root_logger.warning(f'timeout with keyword: {keyword}')
             continue
         pagination = driver.find_elements_by_xpath('.//div[contains(@class, "PublicListPaginatorStyles")]//a[@type="pageItem"]')
         if len(pagination) > 1 and page_num != len(pagination):
@@ -105,14 +135,45 @@ def parsing(driver, keywords):
                 parse_page(driver=driver)
             except TimeoutException:
                 continue
+    root_logger.info(f'Parsed ' + str(len(res)) + ' tenders')
             
-        
+
+def sending_email(filename):
+    body = "Below you find file with actual tenders from Zakupki Mos"
+    contents = [
+        body,
+        filename
+    ]
+
+    yagmail.register(from_email, password)
+    yag = yagmail.SMTP(from_email)
+    yag.send(
+        to=to_emails,
+        subject="Zakupki Mos",
+        cc=cc,
+        bcc=bcc,
+        contents=contents,
+        # attachments=filename,
+    )
+    root_logger = logging.getLogger('zm')
+    root_logger.info(f'File was sended to {to_emails}, copy: {cc}, blind copy: {bcc}')
+
+
 
 res = dict()
 
 driver = webdriver.Chrome()
 driver.maximize_window()
+set_logger()
 
 parsing(driver, get_keywords(FILE_WITH_KEYWORDS))
+<<<<<<< HEAD:tenders/zakupkiMos.py
 print(save_results(res))
+=======
+sending_email(save_results(res))
+
+root_logger = logging.getLogger('zm')
+root_logger.info('='*46)
+
+>>>>>>> 4725fe0773f3a792c250549a3df987f3a3039f37:tenders/zakupki_mos.py
 driver.quit()
