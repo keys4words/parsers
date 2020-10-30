@@ -10,14 +10,8 @@ import yagmail
 from config import from_email, password, to_emails, cc, bcc
 
 
-<<<<<<< HEAD:tenders/zakupkiMos.py
 FILE_WITH_KEYWORDS = 'D:\\USERDATA\\Documents\\4git\\parsers\\tenders\\keywords\\zm_keywords.txt'
 FILE_WITH_REGIONS = 'D:\\USERDATA\\Documents\\4git\\parsers\\tenders\\keywords\\zm_regions.txt'
-=======
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-FILE_WITH_KEYWORDS = os.path.join(BASE_DIR, 'keywords', 'zm_keywords.txt')
-FILE_WITH_REGIONS = os.path.join(BASE_DIR, 'keywords', 'zm_regions.txt')
->>>>>>> 4725fe0773f3a792c250549a3df987f3a3039f37:tenders/zakupki_mos.py
 BASE_URL = 'https://zakupki.mos.ru/purchase/list?page=1&perPage=50&sortField=relevance&sortDesc=true&filter=%7B%22auctionSpecificFilter%22%3A%7B%7D%2C%22needSpecificFilter%22%3A%7B%7D%2C%22tenderSpecificFilter%22%3A%7B%7D%7D&state=%7B%22currentTab%22%3A1%7D'
 
 
@@ -167,13 +161,5 @@ driver.maximize_window()
 set_logger()
 
 parsing(driver, get_keywords(FILE_WITH_KEYWORDS))
-<<<<<<< HEAD:tenders/zakupkiMos.py
-print(save_results(res))
-=======
 sending_email(save_results(res))
-
-root_logger = logging.getLogger('zm')
-root_logger.info('='*46)
-
->>>>>>> 4725fe0773f3a792c250549a3df987f3a3039f37:tenders/zakupki_mos.py
 driver.quit()
