@@ -7,6 +7,7 @@ from openpyxl import Workbook
 import random, os, logging, time
 from datetime import datetime
 import yagmail
+import keyring
 from config import from_email, password, to_emails, cc, bcc
 
 
@@ -153,6 +154,7 @@ def sending_email(filename):
     ]
 
     yagmail.register(from_email, password)
+    # keyring.set_keyring(keyring.backend.Win32CryptoKeyring())
     yag = yagmail.SMTP(from_email)
     yag.send(
         to=to_emails,
