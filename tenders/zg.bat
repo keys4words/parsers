@@ -1,0 +1,1 @@
+D:\USERDATA\Documents\4git\parsers\tenders\env\Scripts\python.exe "D:\USERDATA\Documents\4git\parsers\tenders\zakupki_gov.py"
