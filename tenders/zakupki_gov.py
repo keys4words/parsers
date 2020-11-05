@@ -1,4 +1,4 @@
-import requests, random, os, logging, time, re
+import requests, random, os, logging, time, re, sqlite3
 from bs4 import BeautifulSoup
 from openpyxl import Workbook
 from datetime import datetime
@@ -11,6 +11,22 @@ BASE_URL = 'https://zakupki.gov.ru'
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 FILE_WITH_INNS = os.path.join(BASE_DIR, 'keywords', 'zg_inns.txt')
 HEADERS = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.122 Safari/537.36', 'accept': '*/*'}
+
+
+def create_db():
+    with sqlite3.connect('zg.db') as con:
+        cur = con.cursor()
+        cur.execute("""CREATE TABLE IF NOT EXISTS tenders(
+            number TEXT,
+            name TEXT,
+            url TEXT,
+            customer TEXT,
+            customer_url TEXT,
+            price TEXT,
+            release_date TEXT,
+            refreshing_date TEXT,
+            ending_date TEXT
+        )""")
 
 
 def set_logger():
@@ -149,14 +165,15 @@ def sending_email(filename):
     root_logger.info(f'File was sended to {to_emails2}, blind copy: {bcc}')
 
 
+# main thread
+# res = dict()
 
-res = dict()
+# set_logger()
 
-set_logger()
+# parsing(get_inns(FILE_WITH_INNS))
+# # print(res)
+# sending_email(save_results(res))
 
-parsing(get_inns(FILE_WITH_INNS))
-# print(res)
-sending_email(save_results(res))
-
-root_logger = logging.getLogger('zg')
-root_logger.info('='*46)
+# root_logger = logging.getLogger('zg')
+# root_logger.info('='*46)
+create_db()
