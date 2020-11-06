@@ -29,6 +29,18 @@ def create_db():
         )""")
 
 
+def inDataBase(number):
+    with sqlite3.connect('zg.db') as con:
+        cur = con.cursor()
+        cur.execute(f"SELECT * FROM tenders WHERE number=={number}")
+        return cur.fetchone()
+
+def save_tender(number, name, url, customer, customer_url, price, release_date, refreshing_date, ending_date):
+    with sqlite3.connect('zg.db') as con:
+        cur = con.cursor()
+        cur.execute(f"INSERT INTO tenders (number, name, url, customer, customer_url, price, release_date, refreshing_date, ending_date) VALUES('{number}', '{name}', '{url}', '{customer}', '{customer_url}', '{price}', '{release_date}', '{refreshing_date}', '{ending_date}');")
+
+
 def set_logger():
     root_logger = logging.getLogger('zg')
     handler = logging.FileHandler('logs\\zg.log', 'a', 'utf-8')
@@ -68,7 +80,7 @@ def parsing(inns):
                 for el in elements:
                     number = el.find(
                         'div', class_='registry-entry__header-mid__number').a
-                    tender_url = BASE_URL + number.get('href')
+                    tender_url = number.get('href')
                     number = number.text.strip().replace('\n', '').replace('№ ', '')
                     name = el.find(text=re.compile("Объект закупки")
                                    ).parent.find_next_sibling()
@@ -79,7 +91,7 @@ def parsing(inns):
                     try:
                         customer = el.find(text=re.compile(
                             "Заказчик")).parent.find_next_sibling().a
-                        customer_url = BASE_URL + customer.get('href')
+                        customer_url = customer.get('href')
                         customer = customer.text.strip().replace('\n', '')
                         last_customer = customer
                         last_customer_url = customer_url
@@ -98,16 +110,30 @@ def parsing(inns):
                     ending_date = el.find(text=re.compile(
                         "Окончание подачи заявок")).parent.find_next_sibling()
                     ending_date = ending_date.text
-                    res[number] = {
-                        'name': name,
-                        'url': tender_url,
-                        'customer': customer,
-                        'customer_url': customer_url,
-                        'price': price,
-                        'release_date': release_date,
-                        'refreshing_date': refreshing_date,
-                        'ending_date': ending_date
-                    }
+                    if not inDataBase(number):
+                        save_tender(
+                            number=number,
+                            name=name,
+                            url=tender_url,
+                            customer=customer,
+                            customer_url=customer_url,
+                            price=price,
+                            release_date=release_date,
+                            refreshing_date=refreshing_date,
+                            ending_date=ending_date
+                            )
+                        res[number] = {
+                            'name': name,
+                            'url': tender_url,
+                            'customer': customer,
+                            'customer_url': customer_url,
+                            'price': price,
+                            'release_date': release_date,
+                            'refreshing_date': refreshing_date,
+                            'ending_date': ending_date
+                        }
+                    else:
+                        pass
                 root_logger.info(
                     f'Parsed {str(len(elements))} tenders for customer with INN #{inn}')
             else:
@@ -166,14 +192,14 @@ def sending_email(filename):
 
 
 # main thread
-# res = dict()
+res = dict()
 
-# set_logger()
+set_logger()
 
-# parsing(get_inns(FILE_WITH_INNS))
-# # print(res)
-# sending_email(save_results(res))
+parsing(get_inns(FILE_WITH_INNS))
+# print(res)
+sending_email(save_results(res))
 
-# root_logger = logging.getLogger('zg')
-# root_logger.info('='*46)
-create_db()
+root_logger = logging.getLogger('zg')
+root_logger.info('='*46)
+# create_db()
