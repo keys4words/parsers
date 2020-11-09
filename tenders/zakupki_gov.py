@@ -32,7 +32,7 @@ def create_db():
 def inDataBase(number):
     with sqlite3.connect('zg.db') as con:
         cur = con.cursor()
-        cur.execute(f"SELECT * FROM tenders WHERE number=={number}")
+        cur.execute(f"SELECT * FROM tenders WHERE number=='{number}'")
         return cur.fetchone()
 
 def save_tender(number, name, url, customer, customer_url, price, release_date, refreshing_date, ending_date):
@@ -81,6 +81,8 @@ def parsing(inns):
                     number = el.find(
                         'div', class_='registry-entry__header-mid__number').a
                     tender_url = number.get('href')
+                    if 'https' not in tender_url:
+                        tender_url = BASE_URL + tender_url
                     number = number.text.strip().replace('\n', '').replace('№ ', '')
                     name = el.find(text=re.compile("Объект закупки")
                                    ).parent.find_next_sibling()
@@ -92,6 +94,8 @@ def parsing(inns):
                         customer = el.find(text=re.compile(
                             "Заказчик")).parent.find_next_sibling().a
                         customer_url = customer.get('href')
+                        if 'https' not in customer_url:
+                            tender_url = BASE_URL + customer_url
                         customer = customer.text.strip().replace('\n', '')
                         last_customer = customer
                         last_customer_url = customer_url
