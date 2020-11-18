@@ -41,7 +41,7 @@ def parse_page(keyword, driver):
     searchBtn = driver.find_element_by_xpath('//button[@class="pt7 pb7 no-outline button-full block brdr-none align-center lh20 bg-cl-th-accent bg-cl-th-button-primary ripple fs14 cl-white relative mb11"]')
     searchBtn.click()
 
-    delay = random.randint(6, 15)
+    delay = random.randint(8, 15)
     root_logger = logging.getLogger('bz')
     try:
         WebDriverWait(driver, delay).until(EC.presence_of_element_located((By.XPATH, '//div[@class="container"]//div[@class="row"]//div[contains(@class, "purchase")]')))
@@ -57,6 +57,8 @@ def parse_page(keyword, driver):
                 number = number.text
             except StaleElementReferenceException:
                 number = '#'
+            
+            WebDriverWait(driver, delay).until(EC.presence_of_element_located((By.XPATH, './/div[@class="cl-black fs12 weight-500 lh20 td-underline wwrap-bw"]')))
             name = el.find_element_by_xpath('.//div[@class="cl-black fs12 weight-500 lh20 td-underline wwrap-bw"]')
             name = name.text
             timer = el.find_element_by_xpath('.//div[@id="timer"]')
