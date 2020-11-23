@@ -1,11 +1,13 @@
+import sqlite3
+import random, os, logging, time
+from datetime import datetime
+
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException, ElementClickInterceptedException, ElementNotInteractableException
 from openpyxl import Workbook
-import random, os, logging, time
-from datetime import datetime
 import yagmail
 import keyring
 from config import from_email, password, to_emails, cc, bcc
@@ -15,6 +17,30 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 FILE_WITH_KEYWORDS = os.path.join(BASE_DIR, 'keywords', 'bz_keywords.txt')
 FILE_WITH_REGIONS = os.path.join(BASE_DIR, 'keywords', 'bz_regions.txt')
 BASE_URL = 'https://agregatoreat.ru/purchases/new'
+
+
+def create_db():
+    with sqlite3.connect('bz.db') as con:
+        cur = con.cursor()
+        cur.execute("""CREATE TABLE IF NOT EXISTS tenders(
+            number TEXT,
+            name TEXT,
+            timer TEXT,
+            customer TEXT,
+            price TEXT,
+            info TEXT
+        )""")
+
+def isInDataBase(number):
+    with sqlite3.connect('bz.db') as con:
+        cur = con.cursor()
+        cur.execute(f"SELECT * FROM tenders WHERE number=='{number}'")
+        return cur.fetchone()
+
+def save_tender(number, name, timer, customer, price, info):
+    with sqlite3.connect('bz.db') as con:
+        cur = con.cursor()
+        cur.execute(f"INSERT INTO tenders (number, name, timer, customer, price, info) VALUES('{number}', '{name}', '{timer}', '{customer}', '{price}', '{info}');")
 
 
 def set_logger():
@@ -69,14 +95,25 @@ def parse_page(keyword, driver):
             price = price.text
             info = el.find_element_by_xpath('.//a[@class="brdr-l-1 cl-green brdr-cl-gray3 px15 py5 flex wrap no-underline"]')
             info = info.get_attribute('href')
-            if number in res:
-                res[number]['timer']  = timer
-            res[number] = {'name': name,
-                           'timer': timer,
-                           'customer': customer,
-                           'price': price,
-                           'info': info}
-            
+
+            if not isInDataBase(number):
+                        save_tender(number=number
+                            ,name=name
+                            ,timer=timer
+                            ,customer=customer
+                            ,price=price
+                            ,info=info
+                            )
+                        res[number] = {
+                            'name': name,
+                            'timer': timer,
+                            'customer': customer,
+                            'price': price,
+                            'info': info
+                        }
+            else:
+                pass
+
         root_logger.info(f'parsing OK with keyword: {keyword}')
         searchbox.clear()
     except TimeoutException:
@@ -190,3 +227,4 @@ root_logger.info('='*36)
 
 
 driver.quit()
+# create_db()
