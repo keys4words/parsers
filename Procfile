@@ -1,1 +1,1 @@
-web: python scriptOne/app.py
+web: python app.py
