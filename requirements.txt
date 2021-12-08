@@ -1,0 +1,4 @@
+requests==2.24.0
+bs4==0.0.1
+yagmail==0.13.241
+openpyxl==3.0.5

@@ -1,6 +1,0 @@
-scrapy cli-commands: 
-- scrapy startproject projectName
-- scrapy genspider objectsForScraping urlForScraping(without http and finishing "/")
-
-- scrapy shell
-- scrapy crawl countries
